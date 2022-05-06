@@ -1,0 +1,4 @@
+matplotlib==3.5.1
+numpy==1.22.3
+PyQt6==6.3.0
+setuptools==58.1.0
