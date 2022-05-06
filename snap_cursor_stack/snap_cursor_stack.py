@@ -57,6 +57,13 @@ class SnapCursorStack:
         if handler in self.__cursors_moved_handlers:
             self.__cursors_moved_handlers.remove(handler)
 
+    def annotate(self, texts):
+        if len(texts) != len(self.__cursors):
+            raise ValueError(
+                "Number of texts must be same as number of cursors")
+        for i, text in enumerate(texts):
+            self.__cursors[i].annotate(text)
+
     def add_cursor(self, xdata_ind, **kwargs):
         if not isinstance(xdata_ind, int):
             raise TypeError("xdata_ind must be int")
@@ -135,6 +142,9 @@ class SnapCursorStack:
 
         self.__prev_cursor_xdata = self.get_cursor_xdata()
 
+        self.__picked_cursor.enable_focus()
+        self.draw_idle()
+
         self.__canvas.mpl_disconnect(
             self.__transform_mouse_pointer_over_cursor_cid)
         self.__transform_mouse_pointer_over_cursor_cid = None
@@ -167,6 +177,8 @@ class SnapCursorStack:
             for handler in self.__cursors_moved_handlers:
                 handler()
         self.__prev_cursor_xdata = None
+
+        self.__picked_cursor.disable_focus()
 
         self.__picked_cursor = None
         self.__xdata_move_range_left_lim_ind = None
