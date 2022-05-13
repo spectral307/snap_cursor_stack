@@ -1,5 +1,5 @@
 class Cursor:
-    def __init__(self, xdata, xdata_ind, axes, **kwargs):
+    def __init__(self, xdata, xdata_ind, ydata, axes, **kwargs):
         figures = []
         for ax in axes:
             if ax.figure not in figures:
@@ -10,28 +10,26 @@ class Cursor:
         self.__canvas = figures[0].canvas
         self.__xdata_ind = xdata_ind
         self.__xdata = xdata
+        self.__ydata = ydata
         self.__axes = axes
         self.axvlines = []
         self.points = []
         self.__annotations = {}
         self.__cids = {}
 
-        for ax in axes:
+        for i, ax in enumerate(axes):
             axvline = ax.axvline(
                 self.__xdata[xdata_ind], pickradius=2, picker=True, **kwargs)
             self.axvlines.append(axvline)
-            ydata = ax.lines[0].get_ydata()
             point = ax.scatter(
-                self.__xdata[xdata_ind], ydata[xdata_ind], **kwargs)
+                self.__xdata[xdata_ind], self.__ydata[i][xdata_ind], **kwargs)
             self.points.append(point)
 
         self.__axvline_zorder = self.axvlines[0].get_zorder()
         self.__annotation_zorder = None
 
     def annotate(self, text, **kwargs):
-        for ann in self.__annotations.values():
-            ann.remove()
-        self.__annotations.clear()
+        self.__clear_annotations()
 
         self.__disconnect_ylim_changed_handlers()
 
@@ -68,13 +66,29 @@ class Cursor:
         self.__annotation_zorder = list(self.__annotations.values())[
             0].get_zorder()
 
+    def remove(self):
+        self.__clear_annotations()
+        self.__disconnect_ylim_changed_handlers()
+        for point in self.points:
+            point.remove()
+        self.points.clear()
+        for line in self.axvlines:
+            for ax in self.__axes:
+                if line in ax.lines:
+                    ax.lines.remove(line)
+
     def __disconnect_ylim_changed_handlers(self):
         for ax, cid in self.__cids.items():
             ax.callbacks.disconnect(cid)
         self.__cids.clear()
 
+    def __clear_annotations(self):
+        for ann in self.__annotations.values():
+            ann.remove()
+        self.__annotations.clear()
+
     def __del__(self):
-        self.__disconnect_ylim_changed_handlers()
+        self.remove()
 
     def __refresh_annotation_y_pos(self, ax):
         ann = self.__annotations[ax]
@@ -113,9 +127,8 @@ class Cursor:
             return
         for axvline in self.axvlines:
             axvline.set_xdata(self.__xdata[value])
-        for point in self.points:
-            ydata = point.axes.lines[0].get_ydata()
-            point.set_offsets((self.__xdata[value], ydata[value]))
+        for i, point in enumerate(self.points):
+            point.set_offsets((self.__xdata[value], self.__ydata[i][value]))
         self.__xdata_ind = value
         self.__refresh_annotation_x_pos()
 

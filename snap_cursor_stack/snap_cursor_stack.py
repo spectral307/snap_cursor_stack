@@ -8,9 +8,10 @@ from .cursor import Cursor
 
 
 class SnapCursorStack:
-    def __init__(self, axes, xdata: np.array):
+    def __init__(self, axes, xdata: np.array, ydata):
         self.__axes = axes
         self.__xdata = xdata
+        self.__ydata = ydata
 
         figures = []
         for ax in self.__axes:
@@ -65,7 +66,7 @@ class SnapCursorStack:
             self.__cursors[i].annotate(text)
 
     def add_cursor(self, xdata_ind, **kwargs):
-        if not isinstance(xdata_ind, int):
+        if not isinstance(xdata_ind, (int, np.int32, np.int64)):
             raise TypeError("xdata_ind must be int")
 
         if xdata_ind < 0:
@@ -76,11 +77,15 @@ class SnapCursorStack:
                 raise ValueError("There is already cursor with same xdata_ind")
 
         cursor = Cursor(
-            self.__xdata, xdata_ind,  self.__axes, **kwargs)
+            self.__xdata, xdata_ind, self.__ydata, self.__axes, **kwargs)
         insort(self.__cursors, cursor)
 
     def draw_idle(self):
         self.__canvas.draw_idle()
+
+    def clear(self):
+        for cursor in self.__cursors:
+            cursor.remove()
 
     def __enable_size_hor(self, cursor):
         QApplication.setOverrideCursor(Qt.CursorShape.SizeHorCursor)
@@ -201,7 +206,7 @@ class SnapCursorStack:
             event.xdata, lo=self.__xdata_move_range_left_lim_ind+1,
             hi=self.__xdata_move_range_right_lim_ind)
 
-        # closest_xdata_ind = self.__get_closest_xdata_ind(event.xdata)
+        closest_xdata_ind = self.__get_closest_xdata_ind(event.xdata)
 
         self.__picked_cursor.set_xdata_ind(closest_xdata_ind)
         self.draw_idle()
@@ -218,13 +223,11 @@ class SnapCursorStack:
 
     def __get_closest_sorted_xdata_ind(self, x, **kwargs):
         pos = bisect_left(self.__xdata, x, **kwargs)
-        if pos == 0:
-            return self.__xdata[0]
-        if pos == len(self.__xdata):
-            return self.__xdata[-1]
+        if pos == 0 or pos == len(self.__xdata):
+            return pos
         before = self.__xdata[pos - 1]
         after = self.__xdata[pos]
         if after - x < x - before:
-            return after
+            return pos
         else:
-            return before
+            return pos - 1
