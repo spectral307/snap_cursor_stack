@@ -86,6 +86,7 @@ class SnapCursorStack:
     def clear(self):
         for cursor in self.__cursors:
             cursor.remove()
+        self.__cursors_moved_handlers.clear()
 
     def __enable_size_hor(self, cursor):
         QApplication.setOverrideCursor(Qt.CursorShape.SizeHorCursor)
@@ -178,9 +179,13 @@ class SnapCursorStack:
         self.__disable_drag_mode(event.x, event.y)
 
     def __disable_drag_mode(self, x, y):
-        if self.__prev_cursor_xdata != self.get_cursor_xdata():
-            for handler in self.__cursors_moved_handlers:
-                handler()
+        new_cursor_xdata = self.get_cursor_xdata()
+        for i, v in enumerate(new_cursor_xdata):
+            if self.__prev_cursor_xdata[i] != new_cursor_xdata[i]:
+                for handler in self.__cursors_moved_handlers:
+                    handler(i, self.__picked_cursor.get_xdata_ind())
+                break
+
         self.__prev_cursor_xdata = None
 
         self.__picked_cursor.disable_focus()
